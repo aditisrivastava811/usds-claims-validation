@@ -4,4 +4,5 @@ openpyxl
 python-dateutil
 tqdm
 matplotlib
+requests
 

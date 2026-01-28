@@ -1,200 +1,111 @@
-# USDS Claims Validation
-
-This repository contains a reproducible validation pipeline that compares
-CMS DE-SynPUF Medicare claims data (“legacy CMS baseline”) to outputs from a
-hypothetical **New Claims System**.
-
-The goal is to:
-- Verify input completeness
-- Compare beneficiary-level records across systems
-- Quantify and surface data discrepancies
-- Produce reviewable artifacts for downstream analysis
-
----
-
-## Project Structure
-
-usds-claims-validation/
-│
-├── data/
-│ └── raw/
-│ ├── cms/ # CMS DE-SynPUF input ZIP files (not committed)
-│ └── new/ # New system output files (CSV or ZIP)
-│
-├── outputs/ # Generated discrepancy reports
-│
-├── run_all.py # Main validation pipeline
-├── requirements.txt
-└── README.md
-
-
-##Raw input data is **not** committed to the repository.
-
----
-
-## Required Input Files (CMS DE-SynPUF)
-
-Per the exercise instructions, **only the following CMS files are required**.
-
-### Beneficiary Summary Files (3 ZIPs)
-- DE1.0 Sample 1 2008 Beneficiary Summary File
-- DE1.0 Sample 1 2009 Beneficiary Summary File
-- DE1.0 Sample 1 2010 Beneficiary Summary File
-
-### Carrier Claims Files (2 ZIPs)
-- DE1.0 Sample 1 2008–2010 Carrier Claims (Part 1)
-- DE1.0 Sample 1 2008–2010 Carrier Claims (Part 2)
-
-Place these ZIP files in: data/raw/cms/
-
----
-
-## CMS Carrier Claims File Naming (Important)
-
-CMS DE-SynPUF Carrier Claims files use **inconsistent naming** and often include
-numeric prefixes added at download time (e.g. `176541_…zip`).
-
-The pipeline therefore:
-- Matches CMS ZIPs using **substring patterns**, not exact filenames
-- Treats the two carrier ZIPs as:
-  - `carrier_claims_1` → Sample 1
-  - `carrier_claims_2` → Sample 1B
-
-This allows robust validation even when filenames vary.
-
----
-
-## New System Outputs
-
-New system outputs may be provided as:
-- CSV files directly, or
-- A ZIP archive containing CSVs
-
-Supported outputs:
-- Beneficiary Summary Files (2008–2010)
-- Carrier Claims (Sample 1A and 1B)
-
-Expected location: data/raw/new/
-
----
-
-## What the Pipeline Does
-
-### 1. Preflight Validation
-- Confirms all required CMS ZIPs are present
-- Confirms new system outputs exist
-- Prints CSV contents of each CMS ZIP for manual verification
-
-### 2. Baseline Ingestion
-- Loads CMS Beneficiary Summary files (2008–2010)
-- Loads corresponding New System CSVs
-- Reads all data as strings to avoid type-coercion artifacts
-
-### 3. Beneficiary ID Comparison
+USDS Claims Validation – Data Engineering Take-Home
+ 
+1. Overview
+This project implements a simple ETL-style data validation pipeline to compare CMS DE-SynPUF baseline outputs with results from a new claims processing system.
+The goal is to verify that the new system produces results consistent with the CMS baseline, surface discrepancies, quantify their scope, and generate concrete artifacts that support review and discussion.
+The pipeline is intentionally lightweight, designed to run locally, and produces explicit outputs that can be inspected without additional infrastructure.
+ 
+2. How I Interpreted the Assignment
+The prompt asks to:
+Use the language and database you consider most appropriate.
+Build a simple ETL pipeline into a database or lightweight datastore.
+I interpreted this as an opportunity to demonstrate:
+•	Practical data ingestion and validation
+•	Clear comparison logic that can be explained and reasoned about
+•	Explicit, reproducible outputs that communicate findings
+•	Sensible engineering tradeoffs for dataset size and scope
+Python was chosen for readability and strong data tooling.
+CSV files were used as a lightweight datastore for validation artifacts, allowing results to be reviewed directly without standing up additional services.
+All CMS input files explicitly listed in the assignment are validated and incorporated into the pipeline.
+________________________________________
+3. Data Sources
+3.1 CMS DE-SynPUF Inputs (Required)
+The pipeline validates and uses the following CMS ZIP files:
+Beneficiary Summary Files
+•	2008 Beneficiary Summary
+•	2009 Beneficiary Summary
+•	2010 Beneficiary Summary
+Carrier Claims Files
+•	2008–2010 Carrier Claims Sample 1A
+•	2008–2010 Carrier Claims Sample 1B
+CMS downloads sometimes prepend numeric IDs to filenames (for example, 176541_...zip), so files are identified using substring matching rather than exact filenames.
+________________________________________
+3.2 New Claims System Outputs
+New-system outputs are expected as CSV files located at:
+data/raw/new/New Claims System Outputs/
+These include:
+•	Beneficiary summary outputs for 2008, 2009, and 2010
+•	Carrier claims outputs for Sample 1A and Sample 1B
+________________________________________
+4. Pipeline Behavior
+4.1 Input Validation
+•	Confirms all required CMS ZIP files are present
+•	Confirms all expected new-system CSV outputs are present
+•	Fails early with clear error messages if any required inputs are missing
+________________________________________
+4.2 CMS ZIP Inspection
+•	Lists the CSV contents of each CMS ZIP to verify expected structure and naming
+________________________________________
+4.3 Beneficiary Comparisons (2008–2010)
 For each year:
-- Compares `DESYNPUF_ID` sets between CMS and New System
-- Reports:
-  - Missing in New
-  - Missing in CMS
-- Writes a discrepancy sample CSV
-
-### 4. Column-Level Mismatch Analysis
-For beneficiaries present in **both systems**:
-- Compares values column-by-column
-- **Treats NULL and empty values as equivalent**
-- Calculates:
-  - Number of mismatched rows per column
-  - Mismatch rate per column
-- Outputs ranked mismatch reports
-
-### 5. Carrier Claims (Deferred)
-Carrier claims ingestion was tested but **full comparison is deferred**
-due to data size (~4.7M rows).
-
-Planned approach:
-- Chunked CSV ingestion
-- Aggregation by beneficiary and service date
-- Metric-level comparison instead of row-by-row
-
----
-
-## Generated Artifacts
-
-The pipeline produces review-ready CSV outputs:
-outputs/
-├── beneficiary_2008_id_discrepancies.csv
-├── beneficiary_2008_column_mismatches.csv
-├── beneficiary_2009_id_discrepancies.csv
-├── beneficiary_2009_column_mismatches.csv
-├── beneficiary_2010_id_discrepancies.csv
-└── beneficiary_2010_column_mismatches.csv
-
-
-These artifacts allow reviewers to inspect **exact differences**
-rather than relying on summary statistics alone.
-
----
-
-## Results Summary & Interpretation
-
-### Beneficiary ID Alignment
+•	Load CMS and new-system beneficiary data
+•	Compare row counts
+•	Compare beneficiary identifiers (DESYNPUF_ID)
+•	Quantify ID discrepancies
+•	Perform column-level comparisons for shared beneficiaries
+During comparison:
+•	Only beneficiaries present in both datasets are compared
+•	NULL / NaN values and empty or whitespace-only strings are treated as equivalent to avoid false mismatches
+________________________________________
+4.4 Artifact Generation
+All validation results are written as CSV files under outputs/.
+These artifacts are the primary outputs of the pipeline.
+________________________________________
+5. Output Files
+5.1 ID Discrepancy Reports
+For each beneficiary year (2008–2010), the pipeline produces a CSV containing example beneficiary IDs that are present in one dataset but missing in the other:
+outputs/beneficiary_2008_id_discrepancies.csv
+outputs/beneficiary_2009_id_discrepancies.csv
+outputs/beneficiary_2010_id_discrepancies.csv
+The pipeline reports complete counts of missing IDs in console output.
+The CSV files contain a bounded set of representative IDs intended to support manual inspection and spot-checking.
+________________________________________
+5.2 Column Mismatch Reports
+For each year, the pipeline also produces a complete column-level mismatch summary:
+outputs/beneficiary_2008_column_mismatches.csv
+outputs/beneficiary_2009_column_mismatches.csv
+outputs/beneficiary_2010_column_mismatches.csv
+Each row represents a column present in both datasets and includes:
+•	column: column name
+•	mismatched_rows: number of rows where values differ
+•	mismatch_rate: proportion of mismatches over shared beneficiary IDs
+These reports are intended to highlight which fields differ most and whether discrepancies are isolated or systematic.
+ 
+6. Results Summary
 Across all three years:
-- CMS and New System row counts are identical
-- A small number of IDs (~49–58 per year) appear in one system but not the other
-
-This pattern is consistent across years and suggests boundary or filtering
-differences rather than systemic data loss.
-
-### Column-Level Differences
-- Overall mismatch rates are extremely low (≈0.01% or less)
-- Most discrepancies appear in payment or cost-related fields
-- Demographic fields largely align
-
-Because NULL and empty values are treated as equivalent, reported mismatches
-represent **true value differences**, not formatting artifacts.
-
-### Carrier Claims
-- Successfully ingested union of Sample 1 + Sample 1B
-- Deferred full comparison due to scale
-- Follow-up work is clearly scoped and documented
-
----
-
-## Key Takeaways
-
-- The New Claims System largely matches CMS baseline outputs
-- Discrepancies are:
-  - Small in magnitude
-  - Consistent across years
-  - Isolated to a limited set of fields
-- The pipeline emphasizes **explainability over volume**
-- Design choices prioritize scalability and auditability
-
-Overall, the results suggest the New System is a strong candidate for
-further validation, with remaining work focused on large-scale claims
-aggregation rather than structural correctness.
-
----
-
-## Running the Pipeline
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+•	CMS and new-system row counts match exactly
+•	ID discrepancies are small and symmetric
+•	Column-level mismatches affect a very small fraction of records
+•	Differences are concentrated in date and payment-related fields, which are commonly sensitive to formatting or processing differences
+Overall, the new system aligns closely with the CMS baseline data.
+ 
+7. Carrier Claims Handling
+Full carrier claims comparison was intentionally deferred.
+Reason:
+•	Carrier claims data contain several million rows
+•	A row-by-row comparison is not representative of how large claims systems are typically validated
+Planned scalable approach:
+•	Chunked ingestion
+•	Aggregation by beneficiary and service period
+•	Metric-level comparisons (claim counts, totals, distributions)
+This approach mirrors common production validation strategies for large claims datasets.
+ 
+8. How to Run
 python run_all.py
-
-##Notes
-
-Raw CMS data is not included in the repository
-
-All processing is deterministic and repeatable
-
-The pipeline is designed to be extended to additional years and claim types
-
-
-
-
-
+ 
+9. Notes
+•	The pipeline is intentionally explicit and easy to follow
+•	Validation logic and outputs are designed to support discussion and review
+•	The structure is straightforward to extend to additional years or claim types
 
 

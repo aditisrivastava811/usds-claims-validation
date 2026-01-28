@@ -1,0 +1,7 @@
+pandas
+pyarrow
+openpyxl
+python-dateutil
+tqdm
+matplotlib
+

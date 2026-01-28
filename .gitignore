@@ -1,0 +1,9 @@
+data/
+outputs/
+.venv/
+__pycache__/
+*.db
+*.sqlite
+*.zip
+.DS_Store
+

@@ -19,6 +19,7 @@ CSV files were used as a lightweight datastore for validation artifacts, allowin
 All CMS input files explicitly listed in the assignment are validated and incorporated into the pipeline.
 
 3. Data Sources
+   
 3.1 CMS DE-SynPUF Inputs (Required)
 The pipeline validates and uses the following CMS ZIP files:
 Beneficiary Summary Files
@@ -38,6 +39,7 @@ These include:
 •	Carrier claims outputs for Sample 1A and Sample 1B
 
 4. Pipeline Behavior
+
 4.1 Input Validation
 •	Confirms all required CMS ZIP files are present
 •	Confirms all expected new-system CSV outputs are present
